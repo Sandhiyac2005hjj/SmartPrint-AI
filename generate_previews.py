@@ -470,3 +470,4 @@ if __name__ == '__main__':
     create_analytics_preview()
     create_invoice_preview()
     print("All demo screenshots generated successfully!")
+
