@@ -15,6 +15,7 @@ import lombok.NoArgsConstructor;
 public class CompanySettings {
 
     @Id
+    @Builder.Default
     private Long id = 1L;
 
     @Column(name = "company_name", nullable = false)

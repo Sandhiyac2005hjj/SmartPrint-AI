@@ -89,6 +89,7 @@ public class JobCard {
     private List<JobCardFile> files = new ArrayList<>();
 
     @Column(name = "is_draft")
+    @Builder.Default
     private Boolean isDraft = false;
 
     @Column(name = "created_at", nullable = false, updatable = false)
