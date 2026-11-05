@@ -46,8 +46,8 @@ export const Dashboard: React.FC<DashboardProps> = ({
   const readyJobs = jobCards.filter((j) => j.status === 'Ready').length;
   const deliveredJobs = jobCards.filter((j) => j.status === 'Delivered').length;
 
-  const totalRevenue = jobCards.reduce((acc, j) => acc + j.billing.sellingPrice, 0);
-  const totalBalance = jobCards.reduce((acc, j) => acc + j.billing.balanceAmount, 0);
+  const totalRevenue = jobCards.reduce((acc, j) => acc + (j.billing?.sellingPrice || 0), 0);
+  const totalBalance = jobCards.reduce((acc, j) => acc + (j.billing?.balanceAmount || 0), 0);
 
   const recentJobs = [...jobCards].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()).slice(0, 6);
 

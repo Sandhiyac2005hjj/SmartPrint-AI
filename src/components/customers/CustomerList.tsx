@@ -58,7 +58,7 @@ export const CustomerList: React.FC<CustomerListProps> = ({
   const getCustomerStats = (customerId: string) => {
     const cJobs = jobCards.filter((j) => j.customerId === customerId);
     const totalOrders = cJobs.length;
-    const totalSpent = cJobs.reduce((acc, j) => acc + j.billing.sellingPrice, 0);
+    const totalSpent = cJobs.reduce((acc, j) => acc + (j.billing?.sellingPrice || 0), 0);
     return { totalOrders, totalSpent };
   };
 

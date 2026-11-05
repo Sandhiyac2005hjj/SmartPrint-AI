@@ -16,7 +16,9 @@ import {
   FileSpreadsheet,
   RefreshCw,
   X,
-  Receipt
+  Receipt,
+  Zap,
+  AlertTriangle
 } from 'lucide-react';
 import { exportService } from '../../services/export.service';
 import { storageService } from '../../services/storage.service';
@@ -63,7 +65,7 @@ export const JobCardList: React.FC<JobCardListProps> = ({
     }
 
     // Priority filter
-    if (priorityFilter !== 'All' && job.production.priority !== priorityFilter) return false;
+    if (priorityFilter !== 'All' && job.production?.priority !== priorityFilter) return false;
 
     // Job Type filter
     if (jobTypeFilter !== 'All' && job.jobType !== jobTypeFilter) return false;
@@ -264,20 +266,44 @@ export const JobCardList: React.FC<JobCardListProps> = ({
                     <td className="p-4">
                       <p className="font-semibold text-slate-900">{job.productName}</p>
                       <p className="text-[10px] text-slate-400">
-                        {job.jobType} • {job.quantity} Pcs ({job.paperDetails.gsm})
+                        {job.jobType} • {job.quantity} Pcs {job.paperDetails?.gsm ? `(${job.paperDetails.gsm})` : ''}
                       </p>
                     </td>
                     <td className="p-4">
-                      <PriorityBadge priority={job.production.priority} />
+                      {job.production?.priority && <PriorityBadge priority={job.production.priority} />}
                     </td>
-                    <td className="p-4 font-semibold text-slate-800">{job.expectedDeliveryDate}</td>
+                    <td className="p-4">
+                      <p className="font-semibold text-slate-800">{job.expectedDeliveryDate}</p>
+                      {job.predictedCompletionDate && (
+                        <div className="flex items-center gap-1 mt-1 flex-wrap">
+                          <span
+                            className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[10px] font-semibold bg-indigo-50 text-indigo-700 border border-indigo-200"
+                            title={`AI Predicted Completion: ${job.predictedCompletionDate} (${job.predictedDays || '?'} production days)`}
+                          >
+                            <Zap className="w-2.5 h-2.5" />
+                            <span>AI: {job.predictedCompletionDate}</span>
+                          </span>
+                          {job.status !== 'Delivered' &&
+                            job.status !== 'Cancelled' &&
+                            job.predictedCompletionDate > job.expectedDeliveryDate && (
+                              <span
+                                className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[9px] font-extrabold bg-amber-100 text-amber-800 border border-amber-300 animate-pulse"
+                                title="Predicted completion exceeds promised delivery date! Expedite required."
+                              >
+                                <AlertTriangle className="w-2.5 h-2.5 text-amber-600" />
+                                <span>Expedite</span>
+                              </span>
+                            )}
+                        </div>
+                      )}
+                    </td>
                     <td className="p-4">
                       <StatusBadge status={job.status} size="sm" />
                     </td>
                     <td className="p-4">
-                      <p className="font-bold text-navy-900">₹ {job.billing.sellingPrice}</p>
-                      {job.billing.balanceAmount > 0 ? (
-                        <p className="text-[10px] text-amber-600 font-medium">Bal: ₹ {job.billing.balanceAmount}</p>
+                      <p className="font-bold text-navy-900">₹ {job.billing?.sellingPrice ?? 0}</p>
+                      {(job.billing?.balanceAmount ?? 0) > 0 ? (
+                        <p className="text-[10px] text-amber-600 font-medium">Bal: ₹ {job.billing?.balanceAmount}</p>
                       ) : (
                         <span className="text-[10px] text-emerald-600 font-bold">Fully Paid</span>
                       )}

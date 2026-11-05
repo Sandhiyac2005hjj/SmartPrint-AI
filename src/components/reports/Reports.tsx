@@ -27,9 +27,9 @@ export const Reports: React.FC<ReportsProps> = ({ jobCards }) => {
 
   const displayJobs = filteredJobs.length > 0 ? filteredJobs : jobCards;
 
-  const totalRevenue = displayJobs.reduce((acc, j) => acc + j.billing.sellingPrice, 0);
-  const totalAdvance = displayJobs.reduce((acc, j) => acc + j.billing.advancePaid, 0);
-  const totalBalance = displayJobs.reduce((acc, j) => acc + j.billing.balanceAmount, 0);
+  const totalRevenue = displayJobs.reduce((acc, j) => acc + (j.billing?.sellingPrice || 0), 0);
+  const totalAdvance = displayJobs.reduce((acc, j) => acc + (j.billing?.advancePaid || 0), 0);
+  const totalBalance = displayJobs.reduce((acc, j) => acc + (j.billing?.balanceAmount || 0), 0);
   const totalDelivered = displayJobs.filter((j) => j.status === 'Delivered').length;
   const totalPending = displayJobs.filter((j) => j.status !== 'Delivered' && j.status !== 'Cancelled').length;
 
@@ -49,7 +49,7 @@ export const Reports: React.FC<ReportsProps> = ({ jobCards }) => {
       customerName: j.customerName,
       productName: j.productName,
       status: j.status,
-      amount: j.billing.sellingPrice,
+      amount: j.billing?.sellingPrice || 0,
     }));
 
     exportService.exportReportToPDF(title, summaryStats, tableData, `${reportType}_Report.pdf`);

@@ -1,0 +1,11 @@
+{
+  "run_id": "77ec207c-abfa-42dd-9273-9e92344ab80b",
+  "started_at": "2026-11-05T13:31:02.433939",
+  "finished_at": "2026-11-05T13:31:32.955243",
+  "duration_secs": 30.52,
+  "total_input": 5150,
+  "accepted": 4950,
+  "rejected": 200,
+  "acceptance_rate_pct": 96.12,
+  "rejection_rate_pct": 3.88
+}

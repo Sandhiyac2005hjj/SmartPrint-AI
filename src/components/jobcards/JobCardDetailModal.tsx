@@ -23,7 +23,9 @@ import {
   Scissors,
   CheckCircle2,
   FileCheck,
-  Receipt
+  Receipt,
+  Zap,
+  AlertTriangle
 } from 'lucide-react';
 
 interface JobCardDetailModalProps {
@@ -159,7 +161,7 @@ export const JobCardDetailModal: React.FC<JobCardDetailModalProps> = ({
                 </div>
               </div>
 
-              <div className="flex items-center gap-6 text-right">
+              <div className="flex flex-wrap items-center gap-6 text-right">
                 <div>
                   <span className="text-[10px] font-bold text-slate-400 uppercase block">Job Date</span>
                   <span className="font-semibold text-slate-800">{jobCard.jobDate}</span>
@@ -168,8 +170,40 @@ export const JobCardDetailModal: React.FC<JobCardDetailModalProps> = ({
                   <span className="text-[10px] font-bold text-slate-400 uppercase block">Expected Delivery</span>
                   <span className="font-bold text-rose-600">{jobCard.expectedDeliveryDate}</span>
                 </div>
+                {jobCard.predictedCompletionDate && (
+                  <div>
+                    <span className="text-[10px] font-bold text-indigo-500 uppercase block">AI Est. Completion</span>
+                    <span className="font-bold text-indigo-700 flex items-center justify-end gap-1">
+                      <Zap className="w-3 h-3 text-indigo-500" />
+                      {jobCard.predictedCompletionDate}
+                      {jobCard.predictedDays ? ` (${jobCard.predictedDays}d)` : ''}
+                    </span>
+                  </div>
+                )}
               </div>
             </div>
+
+            {/* AI Expedite Warning Banner if Turnaround Exceeds Deadline */}
+            {jobCard.predictedCompletionDate &&
+              jobCard.expectedDeliveryDate &&
+              jobCard.status !== 'Delivered' &&
+              jobCard.status !== 'Cancelled' &&
+              jobCard.predictedCompletionDate > jobCard.expectedDeliveryDate && (
+                <div className="p-3 bg-amber-50 border border-amber-300 rounded-xl flex items-center justify-between gap-3 text-amber-900 animate-fadeIn">
+                  <div className="flex items-center gap-2.5">
+                    <AlertTriangle className="w-5 h-5 text-amber-600 shrink-0" />
+                    <div className="text-xs">
+                      <strong className="font-bold">⚠️ Production Expedite Alert:</strong>{' '}
+                      AI turnaround model predicts completion on{' '}
+                      <span className="underline font-bold text-rose-700">{jobCard.predictedCompletionDate}</span>, which is past the promised customer deadline ({jobCard.expectedDeliveryDate}).
+                      Prioritize on high-speed press or assign dedicated operator.
+                    </div>
+                  </div>
+                  <span className="shrink-0 px-2.5 py-1 bg-amber-200 text-amber-900 rounded-lg text-[10px] font-extrabold uppercase tracking-wider border border-amber-300">
+                    Expedite Required
+                  </span>
+                </div>
+              )}
 
             {/* Visual Timeline Component */}
             <JobCardTimeline jobCard={jobCard} onUpdateStatus={onUpdateStatus} />

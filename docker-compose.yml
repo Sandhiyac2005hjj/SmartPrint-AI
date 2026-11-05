@@ -1,0 +1,92 @@
+version: "3.9"
+
+# ============================================================================
+# PrintPulse Analytics — Docker Compose
+# ============================================================================
+# ⚠ ALL DATA IS SYNTHETIC — For portfolio demonstration only.
+#
+# Services:
+#   postgres   — Local PostgreSQL (optional: use your Supabase URL instead)
+#   backend    — Spring Boot REST API (port 8080)
+#   ml-service — Flask ML prediction service (port 5001)
+#   frontend   — React/Vite dev server (port 5173)
+#
+# Quick start:
+#   docker-compose up --build
+#   # Or without local postgres (using Supabase):
+#   SKIP_POSTGRES=true docker-compose up --build backend ml-service frontend
+# ============================================================================
+
+services:
+  # ── PostgreSQL (local fallback) ────────────────────────────────────────────
+  postgres:
+    image: postgres:15-alpine
+    container_name: printpulse_postgres
+    environment:
+      POSTGRES_DB:       jobcard_db
+      POSTGRES_USER:     postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./backend/src/main/resources/schema.sql:/docker-entrypoint-initdb.d/01_schema.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    profiles: ["local"]  # only starts with --profile local
+
+  # ── Spring Boot Backend ────────────────────────────────────────────────────
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: printpulse_backend
+    ports:
+      - "8080:8080"
+    environment:
+      SPRING_DATASOURCE_URL:      ${SPRING_DATASOURCE_URL:-jdbc:postgresql://postgres:5432/jobcard_db}
+      SPRING_DATASOURCE_USERNAME: ${SPRING_DATASOURCE_USERNAME:-postgres}
+      SPRING_DATASOURCE_PASSWORD: ${SPRING_DATASOURCE_PASSWORD:-postgres}
+    depends_on:
+      postgres:
+        condition: service_healthy
+        required: false
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:8080/actuator/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+
+  # ── Python ML Prediction Service ───────────────────────────────────────────
+  ml-service:
+    build:
+      context: ./analytics
+      dockerfile: Dockerfile.ml
+    container_name: printpulse_ml
+    ports:
+      - "5001:5001"
+    volumes:
+      - ./analytics/ml/models:/app/ml/models:ro   # Mount trained model read-only
+      - ./analytics/output:/app/output:ro
+    environment:
+      PYTHONUNBUFFERED: "1"
+
+  # ── React Frontend ──────────────────────────────────────────────────────────
+  frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile.frontend
+    container_name: printpulse_frontend
+    ports:
+      - "5173:5173"
+    environment:
+      VITE_API_BASE: ${VITE_API_BASE:-http://localhost:8080}
+    depends_on:
+      - backend
+
+volumes:
+  postgres_data:

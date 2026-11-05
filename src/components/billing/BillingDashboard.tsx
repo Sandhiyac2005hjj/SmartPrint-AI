@@ -42,10 +42,10 @@ export const BillingDashboard: React.FC<BillingDashboardProps> = ({
   const settings = storageService.getSettings();
 
   // Financial Calculations across all job cards
-  const totalGrossRevenue = jobCards.reduce((sum, j) => sum + (j.billing.sellingPrice || 0), 0);
-  const totalCollected = jobCards.reduce((sum, j) => sum + (j.billing.advancePaid || 0), 0);
-  const totalOutstanding = jobCards.reduce((sum, j) => sum + (j.billing.balanceAmount || 0), 0);
-  const totalEstimatedCost = jobCards.reduce((sum, j) => sum + (j.billing.estimatedCost || 0), 0);
+  const totalGrossRevenue = jobCards.reduce((sum, j) => sum + (j.billing?.sellingPrice || 0), 0);
+  const totalCollected = jobCards.reduce((sum, j) => sum + (j.billing?.advancePaid || 0), 0);
+  const totalOutstanding = jobCards.reduce((sum, j) => sum + (j.billing?.balanceAmount || 0), 0);
+  const totalEstimatedCost = jobCards.reduce((sum, j) => sum + (j.billing?.estimatedCost || 0), 0);
   const estimatedProfit = Math.max(0, totalGrossRevenue - totalEstimatedCost);
   const profitMarginPercent = totalGrossRevenue > 0 ? Math.round((estimatedProfit / totalGrossRevenue) * 100) : 0;
 
@@ -56,9 +56,9 @@ export const BillingDashboard: React.FC<BillingDashboardProps> = ({
       j.customerName.toLowerCase().includes(searchTerm.toLowerCase()) ||
       j.company.toLowerCase().includes(searchTerm.toLowerCase()) ||
       j.productName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (j.billing.billNo && j.billing.billNo.toLowerCase().includes(searchTerm.toLowerCase()));
+      (j.billing?.billNo && j.billing.billNo.toLowerCase().includes(searchTerm.toLowerCase()));
 
-    const matchesStatus = statusFilter === 'All' || j.billing.paymentStatus === statusFilter;
+    const matchesStatus = statusFilter === 'All' || j.billing?.paymentStatus === statusFilter;
     return matchesSearch && matchesStatus;
   });
 

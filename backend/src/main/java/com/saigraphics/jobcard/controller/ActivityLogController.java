@@ -13,7 +13,7 @@ import java.util.Map;
 @RestController
 @RequestMapping("/api/logs")
 @RequiredArgsConstructor
-@CrossOrigin(origins = "*")
+@CrossOrigin(originPatterns = "*")
 public class ActivityLogController {
 
     private final ActivityLogService activityLogService;

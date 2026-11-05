@@ -1,24 +1,46 @@
-# Logs
-logs
-*.log
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-pnpm-debug.log*
-lerna-debug.log*
+# Node / Frontend
+node_modules/
+dist/
+.env
 
-node_modules
-dist
-dist-ssr
-*.local
+# Python
+analytics/__pycache__/
+analytics/**/__pycache__/
+analytics/**/*.pyc
+analytics/.venv/
+analytics/venv/
+analytics/output/*.csv
+analytics/output/*.json
+analytics/ml/models/*.pkl
+analytics/ml/models/*.joblib
+analytics/.pytest_cache/
+analytics/**/.pytest_cache/
+analytics/pipeline/pipeline_db/
 
-# Editor directories and files
-.vscode/*
-!.vscode/extensions.json
-.idea
+# Java / Maven
+backend/target/
+backend/.mvn/
+
+# IDE
+.idea/
+*.iml
+.vscode/
+*.swp
+
+# OS
 .DS_Store
-*.suo
-*.ntvs*
-*.njsproj
-*.sln
-*.sw?
+Thumbs.db
+
+# JVM crash logs
+hs_err_pid*.log
+replay_pid*.log
+
+# Temp
+tmp_chrome/
+
+# Uploads
+backend/uploads/
+ 
+# Log files
+*.log
+analytics/**/*.log

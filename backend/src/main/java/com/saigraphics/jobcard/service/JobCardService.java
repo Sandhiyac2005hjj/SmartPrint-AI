@@ -59,6 +59,8 @@ public class JobCardService {
             
             existing.setJobDate(jobCard.getJobDate());
             existing.setExpectedDeliveryDate(jobCard.getExpectedDeliveryDate());
+            existing.setPredictedCompletionDate(jobCard.getPredictedCompletionDate());
+            existing.setPredictedDays(jobCard.getPredictedDays());
             existing.setStatus(jobCard.getStatus());
             
             if (jobCard.getBilling() != null) {

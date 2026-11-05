@@ -62,6 +62,12 @@
             <optional>true</optional>
         </dependency>
         
+        <!-- JDBC Template for native SQL analytics queries -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-jdbc</artifactId>
+        </dependency>
+
         <!-- Spring Boot Starter Test -->
         <dependency>
             <groupId>org.springframework.boot</groupId>

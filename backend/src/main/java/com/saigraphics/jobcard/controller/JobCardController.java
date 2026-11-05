@@ -14,7 +14,7 @@ import java.util.Map;
 @RestController
 @RequestMapping("/api/jobcards")
 @RequiredArgsConstructor
-@CrossOrigin(origins = "*")
+@CrossOrigin(originPatterns = "*")
 public class JobCardController {
 
     private final JobCardService jobCardService;

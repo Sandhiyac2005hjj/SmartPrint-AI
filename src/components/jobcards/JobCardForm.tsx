@@ -1,20 +1,25 @@
 import React, { useState, useEffect } from 'react';
 import { JobCard, Customer, PaperDetails, PrintDetails, ProductionDetails, BillingDetails, PriorityLevel, Employee } from '../../types';
 import { SAMPLE_EMPLOYEES } from '../../services/storage.service';
-import { 
-  FileText, 
+import { mlApi, CompletionPrediction } from '../../services/ml.service';
+import {
+  FileText,
   ArrowLeft,
-  UserSearch, 
-  Scissors, 
-  Printer, 
-  DollarSign, 
-  Save, 
-  X, 
-  Sparkles, 
+  UserSearch,
+  Scissors,
+  Printer,
+  DollarSign,
+  Save,
+  X,
+  Sparkles,
   Check,
   AlertCircle,
+  AlertTriangle,
   Plus,
-  UserPlus
+  UserPlus,
+  Zap,
+  Clock,
+  Flame
 } from 'lucide-react';
 
 interface JobCardFormProps {
@@ -51,7 +56,7 @@ export const JobCardForm: React.FC<JobCardFormProps> = ({
   const [quickEmpRole, setQuickEmpRole] = useState('Offset Operator');
 
   // Available Employees Display List
-  const operatorList = employees.length > 0 
+  const operatorList = employees.length > 0
     ? employees.map(e => e.role ? `${e.name} (${e.role})` : e.name)
     : SAMPLE_EMPLOYEES;
 
@@ -84,6 +89,12 @@ export const JobCardForm: React.FC<JobCardFormProps> = ({
   const [expectedDeliveryDate, setExpectedDeliveryDate] = useState(
     new Date(Date.now() + 86400000 * 3).toISOString().split('T')[0]
   );
+
+  // AI Turnaround Prediction
+  const [predictedCompletionDate, setPredictedCompletionDate] = useState<string | undefined>(undefined);
+  const [predictedDays, setPredictedDays] = useState<number | undefined>(undefined);
+  const [isPredicting, setIsPredicting] = useState<boolean>(false);
+  const [predictionResult, setPredictionResult] = useState<CompletionPrediction | null>(null);
 
   // Billing
   const [billNo, setBillNo] = useState('');
@@ -143,6 +154,9 @@ export const JobCardForm: React.FC<JobCardFormProps> = ({
       setPriority(jobCard.production.priority || 'Medium');
       setJobDate(jobCard.jobDate || new Date().toISOString().split('T')[0]);
       setExpectedDeliveryDate(jobCard.expectedDeliveryDate || new Date().toISOString().split('T')[0]);
+      setPredictedCompletionDate(jobCard.predictedCompletionDate);
+      setPredictedDays(jobCard.predictedDays);
+      setPredictionResult(null);
 
       setBillNo(jobCard.billing.billNo || '');
       setEstimatedCost(jobCard.billing.estimatedCost || 0);
@@ -152,12 +166,18 @@ export const JobCardForm: React.FC<JobCardFormProps> = ({
     } else if (preselectedCustomer) {
       setSelectedCustomerId(preselectedCustomer.id);
       setCustomerSearch(`${preselectedCustomer.name} (${preselectedCustomer.company})`);
+      setPredictedCompletionDate(undefined);
+      setPredictedDays(undefined);
+      setPredictionResult(null);
     } else {
       setSelectedCustomerId('');
       setCustomerSearch('');
       setProductName('');
       setDescription('');
       setQuantity(500);
+      setPredictedCompletionDate(undefined);
+      setPredictedDays(undefined);
+      setPredictionResult(null);
       setBillNo('');
       setEstimatedCost(0);
       setSellingPrice(0);
@@ -165,6 +185,33 @@ export const JobCardForm: React.FC<JobCardFormProps> = ({
       setRemarks('');
     }
   }, [jobCard, preselectedCustomer, isOpen]);
+
+  const handlePredictCompletion = async (priorityOverride?: PriorityLevel) => {
+    setIsPredicting(true);
+    const activePriority = priorityOverride || priority;
+    try {
+      const res = await mlApi.predictCompletion({
+        job_type: jobType,
+        quantity: Number(quantity) || 1,
+        priority: activePriority,
+        print_type: printType,
+        print_lamination: lamination,
+        print_finishing: finishing,
+        print_sides: sides,
+        job_date: jobDate,
+        expected_delivery_date: expectedDeliveryDate,
+      });
+      if (res) {
+        setPredictionResult(res);
+        setPredictedCompletionDate(res.predicted_completion_date);
+        setPredictedDays(res.predicted_days);
+      }
+    } catch (err) {
+      console.error('Failed to predict completion:', err);
+    } finally {
+      setIsPredicting(false);
+    }
+  };
 
   // Balance calculation
   const balanceAmount = Math.max(0, sellingPrice - advancePaid);
@@ -199,7 +246,44 @@ export const JobCardForm: React.FC<JobCardFormProps> = ({
     e.preventDefault();
 
     const newErrors: { [key: string]: string } = {};
-    if (!selectedCustomerId) newErrors.customer = 'Please select a customer';
+    let finalCustId = selectedCustomerId;
+    let finalCustName = 'Walk-in Customer';
+    let finalCompany = 'Direct Client';
+    let finalPhone = '';
+
+    if (!finalCustId) {
+      if (customerSearch.trim()) {
+        const match =
+          customers.find(
+            (c) =>
+              c.name.toLowerCase() === customerSearch.trim().toLowerCase() ||
+              c.company.toLowerCase() === customerSearch.trim().toLowerCase() ||
+              `${c.name} (${c.company})`.toLowerCase() === customerSearch.trim().toLowerCase()
+          ) || filteredCustomers[0];
+
+        if (match) {
+          finalCustId = match.id;
+          finalCustName = match.name;
+          finalCompany = match.company;
+          finalPhone = match.phone;
+        } else {
+          finalCustId = 'cust-walkin-' + Date.now();
+          finalCustName = customerSearch.trim();
+          finalCompany = 'Walk-in';
+          finalPhone = 'N/A';
+        }
+      } else {
+        newErrors.customer = 'Please select or enter customer name';
+      }
+    } else {
+      const selectedCust = customers.find((c) => c.id === finalCustId);
+      if (selectedCust) {
+        finalCustName = selectedCust.name;
+        finalCompany = selectedCust.company;
+        finalPhone = selectedCust.phone;
+      }
+    }
+
     if (!productName.trim()) newErrors.productName = 'Product name is required';
     if (quantity <= 0) newErrors.quantity = 'Quantity must be greater than 0';
 
@@ -208,14 +292,12 @@ export const JobCardForm: React.FC<JobCardFormProps> = ({
       return;
     }
 
-    const selectedCust = customers.find((c) => c.id === selectedCustomerId);
-
     const data: Partial<JobCard> = {
       id: jobCard?.id,
-      customerId: selectedCustomerId,
-      customerName: selectedCust?.name || 'Walk-in Customer',
-      company: selectedCust?.company || 'N/A',
-      phone: selectedCust?.phone || '',
+      customerId: finalCustId,
+      customerName: finalCustName,
+      company: finalCompany,
+      phone: finalPhone,
 
       jobType,
       productName: productName.trim(),
@@ -244,6 +326,8 @@ export const JobCardForm: React.FC<JobCardFormProps> = ({
       },
       jobDate,
       expectedDeliveryDate,
+      predictedCompletionDate,
+      predictedDays,
       billing: {
         billNo: billNo.trim() || undefined,
         estimatedCost: Number(estimatedCost),
@@ -260,7 +344,7 @@ export const JobCardForm: React.FC<JobCardFormProps> = ({
   };
 
   return (
-    <div 
+    <div
       onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
       className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs animate-fadeIn"
     >
@@ -310,9 +394,8 @@ export const JobCardForm: React.FC<JobCardFormProps> = ({
                 }}
                 onFocus={() => setShowCustomerDropdown(true)}
                 placeholder="Type customer name, company, or phone to search..."
-                className={`w-full p-2.5 bg-white border ${
-                  errors.customer ? 'border-rose-400' : 'border-slate-300'
-                } rounded-lg outline-none focus:ring-2 focus:ring-navy-100 font-medium`}
+                className={`w-full p-2.5 bg-white border ${errors.customer ? 'border-rose-400' : 'border-slate-300'
+                  } rounded-lg outline-none focus:ring-2 focus:ring-navy-100 font-medium`}
               />
 
               {showCustomerDropdown && (
@@ -586,6 +669,144 @@ export const JobCardForm: React.FC<JobCardFormProps> = ({
                 className="w-full p-2 bg-white border border-slate-200 rounded-lg font-bold text-navy-900"
               />
             </div>
+          </div>
+
+          {/* SECTION 4.5: AI TURNAROUND & COMPLETION PREDICTOR */}
+          <div className="bg-gradient-to-br from-indigo-50/90 via-purple-50/50 to-slate-50 p-4 rounded-xl border border-indigo-200/80 shadow-xs space-y-3">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-lg bg-indigo-600 flex items-center justify-center text-white shadow-xs">
+                  <Zap className="w-4 h-4 fill-white" />
+                </div>
+                <div>
+                  <h4 className="font-bold text-xs uppercase tracking-wider text-indigo-950 flex items-center gap-2">
+                    AI Turnaround & Completion Predictor
+                    <span className="text-[10px] font-semibold px-2 py-0.5 rounded bg-indigo-100 text-indigo-700 border border-indigo-200">
+                      R² 0.77 • ±1.5d
+                    </span>
+                  </h4>
+                  <p className="text-[11px] text-slate-500">
+                    Predicts physical production turnaround and alerts if completion exceeds customer promised delivery date.
+                  </p>
+                </div>
+              </div>
+
+              <button
+                type="button"
+                onClick={handlePredictCompletion}
+                disabled={isPredicting}
+                className="flex items-center gap-1.5 px-3.5 py-2 bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800 text-white rounded-lg font-bold text-xs shadow-xs transition-all disabled:opacity-60 disabled:cursor-not-allowed"
+              >
+                {isPredicting ? (
+                  <>
+                    <Clock className="w-3.5 h-3.5 animate-spin" />
+                    <span>Predicting Turnaround...</span>
+                  </>
+                ) : (
+                  <>
+                    <Zap className="w-3.5 h-3.5" />
+                    <span>⚡ Predict Completion Date (AI)</span>
+                  </>
+                )}
+              </button>
+            </div>
+
+            {/* Prediction Result Display */}
+            {(predictedCompletionDate || predictionResult) && (
+              <div className="space-y-2 pt-1">
+                {(() => {
+                  const estDate = predictedCompletionDate || predictionResult?.predicted_completion_date;
+                  const days = predictedDays || predictionResult?.predicted_days || 0;
+                  const isDelay = estDate && expectedDeliveryDate && estDate > expectedDeliveryDate;
+                  const diff = predictionResult?.days_difference ?? (
+                    estDate && expectedDeliveryDate
+                      ? Math.round((new Date(estDate).getTime() - new Date(expectedDeliveryDate).getTime()) / (1000 * 3600 * 24))
+                      : 0
+                  );
+
+                  if (isDelay) {
+                    return (
+                      <div className="p-3 bg-amber-50 border border-amber-300 rounded-xl flex flex-wrap sm:flex-nowrap items-start justify-between gap-3 animate-fadeIn">
+                        <div className="flex items-start gap-2.5">
+                          <AlertTriangle className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
+                          <div>
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <span className="text-xs font-bold text-amber-900">
+                                ⚡ AI Schedule Advisory — Expedite Required
+                              </span>
+                              <span className="px-2 py-0.5 rounded text-[10px] font-black bg-amber-200 text-amber-900 border border-amber-300">
+                                +{diff} Day(s) Overdue
+                              </span>
+                            </div>
+                            <p className="text-[11px] text-amber-800 mt-1">
+                              AI turnaround model forecasts <strong>{days} production days</strong> (ready on{' '}
+                              <strong className="underline font-bold text-rose-700">{estDate}</strong>), which is after customer promised delivery{' '}
+                              <strong className="text-slate-900">({expectedDeliveryDate})</strong>.
+                              Accelerate shop-floor scheduling or mark as Urgent.
+                            </p>
+                          </div>
+                        </div>
+
+                        {priority !== 'Urgent' && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setPriority('Urgent');
+                              handlePredictCompletion('Urgent');
+                            }}
+                            className="shrink-0 flex items-center gap-1 px-3 py-1.5 bg-amber-600 hover:bg-amber-700 active:bg-amber-800 text-white rounded-lg text-xs font-bold shadow-2xs transition-all"
+                            title="Set Priority to Urgent to speed up press turnaround"
+                          >
+                            <Flame className="w-3.5 h-3.5" />
+                            <span>Mark Urgent 🔥</span>
+                          </button>
+                        )}
+                      </div>
+                    );
+                  } else {
+                    return (
+                      <div className="p-3 bg-emerald-50 border border-emerald-300 rounded-xl flex items-start gap-2.5 animate-fadeIn">
+                        <Check className="w-5 h-5 text-emerald-600 shrink-0 mt-0.5" />
+                        <div>
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span className="text-xs font-bold text-emerald-900">
+                              ✅ On Track — Turnaround Feasible
+                            </span>
+                            <span className="px-2 py-0.5 rounded text-[10px] font-black bg-emerald-200 text-emerald-900 border border-emerald-300">
+                              Ready by {estDate} ({days} days)
+                            </span>
+                          </div>
+                          <p className="text-[11px] text-emerald-800 mt-1">
+                            Estimated completion: <strong>{days} day(s)</strong> (Ready on <strong>{estDate}</strong>).
+                            {diff < 0
+                              ? ` Customer deadline has a comfortable ${Math.abs(diff)} day buffer.`
+                              : ' Completes on the customer deadline.'}
+                          </p>
+                        </div>
+                      </div>
+                    );
+                  }
+                })()}
+
+                {/* Factors breakdown */}
+                {predictionResult?.factors && predictionResult.factors.length > 0 && (
+                  <div className="flex flex-wrap items-center gap-1.5 pt-1">
+                    <span className="text-[10px] font-bold text-slate-500 uppercase">Factors:</span>
+                    {predictionResult.factors.map((f, idx) => (
+                      <span
+                        key={idx}
+                        className="px-2 py-0.5 bg-white border border-slate-200 rounded text-[10px] text-slate-700 font-medium"
+                      >
+                        {f.factor}:{' '}
+                        <strong className={f.days > 0 ? 'text-indigo-600' : 'text-emerald-600'}>
+                          {f.days > 0 ? `+${f.days}d` : `${f.days}d`}
+                        </strong>
+                      </span>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
           </div>
 
           {/* SECTION 5: BILLING CALCULATOR */}

@@ -94,6 +94,8 @@ export interface JobCard {
   
   jobDate: string;
   expectedDeliveryDate: string;
+  predictedCompletionDate?: string;
+  predictedDays?: number;
   
   status: JobStatus;
   billing: BillingDetails;
@@ -136,4 +138,4 @@ export interface ActivityLog {
   entityType?: 'JobCard' | 'Customer' | 'Settings' | 'Employee';
 }
 
-export type ActiveTab = 'dashboard' | 'customers' | 'jobcards' | 'billing' | 'files' | 'reports' | 'settings';
+export type ActiveTab = 'dashboard' | 'customers' | 'jobcards' | 'billing' | 'files' | 'reports' | 'settings' | 'analytics';

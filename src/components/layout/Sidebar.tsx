@@ -10,7 +10,8 @@ import {
   Settings as SettingsIcon,
   Printer,
   ChevronRight,
-  ShieldCheck
+  ShieldCheck,
+  LineChart
 } from 'lucide-react';
 
 interface SidebarProps {
@@ -35,6 +36,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
     { id: 'billing', label: 'Billing & Payments', icon: CreditCard },
     { id: 'files', label: 'File Archive', icon: FolderArchive },
     { id: 'reports', label: 'Reports & Export', icon: BarChart3 },
+    { id: 'analytics', label: 'PrintPulse Analytics', icon: LineChart, badge: 'NEW' },
     { id: 'settings', label: 'Settings', icon: SettingsIcon },
   ];
 
@@ -82,6 +84,10 @@ export const Sidebar: React.FC<SidebarProps> = ({
                   isActive ? 'bg-sky-500 text-navy-950' : 'bg-navy-800 text-navy-300'
                 }`}>
                   {item.count}
+                </span>
+              ) : (item as any).badge ? (
+                <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-sky-500/20 text-sky-300 border border-sky-500/30">
+                  {(item as any).badge}
                 </span>
               ) : (
                 <ChevronRight className={`w-3.5 h-3.5 transition-opacity ${isActive ? 'opacity-100 text-sky-400' : 'opacity-0 group-hover:opacity-100 text-navy-400'}`} />

@@ -1,0 +1,39 @@
+{
+  "model_name": "Gradient Boosting Regressor (Turnaround Completion Predictor)",
+  "target": "actual_completion_days",
+  "trained_at": "2026-11-05T15:06:49.893971",
+  "training_samples": 3255,
+  "test_samples": 814,
+  "metrics": {
+    "r2_score": 0.6566,
+    "mae_days": 1.46,
+    "median_ae_days": 1.26,
+    "rmse_days": 1.84,
+    "acc_within_1_day_pct": 41.9,
+    "acc_within_2_days_pct": 75.3
+  },
+  "feature_names": [
+    "complexity",
+    "base_days",
+    "quantity",
+    "qty_factor",
+    "qty_log",
+    "priority_val",
+    "has_lamination",
+    "is_double_sided",
+    "has_foil",
+    "print_type_code"
+  ],
+  "feature_importances": {
+    "complexity": 0.42,
+    "base_days": 0.3196,
+    "quantity": 0.0702,
+    "qty_log": 0.0677,
+    "priority_val": 0.0644,
+    "has_lamination": 0.0215,
+    "print_type_code": 0.0186,
+    "qty_factor": 0.007,
+    "has_foil": 0.0063,
+    "is_double_sided": 0.0047
+  }
+}

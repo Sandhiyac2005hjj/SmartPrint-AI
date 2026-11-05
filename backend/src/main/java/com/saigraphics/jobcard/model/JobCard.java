@@ -63,6 +63,12 @@ public class JobCard {
     @Column(name = "expected_delivery_date", nullable = false)
     private String expectedDeliveryDate;
 
+    @Column(name = "predicted_completion_date")
+    private String predictedCompletionDate;
+
+    @Column(name = "predicted_days")
+    private Integer predictedDays;
+
     @Column(nullable = false)
     private String status;
 

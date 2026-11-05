@@ -18,7 +18,7 @@ import java.nio.file.Path;
 @RestController
 @RequestMapping("/api/files")
 @RequiredArgsConstructor
-@CrossOrigin(origins = "*")
+@CrossOrigin(originPatterns = "*")
 public class FileUploadController {
 
     private final FileStorageService fileStorageService;

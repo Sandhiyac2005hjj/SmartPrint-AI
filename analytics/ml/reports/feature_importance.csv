@@ -1,0 +1,14 @@
+feature,importance
+f_complexity,0.325781
+f_short_lead,0.208637
+f_is_urgent,0.151260
+f_lead_days,0.117946
+f_large_quantity,0.069537
+f_quantity,0.055382
+f_print_type,0.029337
+f_estimated_cost,0.012140
+f_complex_finishing,0.011235
+f_day_of_week,0.008863
+f_double_sided,0.006668
+f_priority,0.003214
+f_has_lamination,0.000000

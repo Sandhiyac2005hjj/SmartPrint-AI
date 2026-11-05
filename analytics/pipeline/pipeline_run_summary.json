@@ -1,0 +1,11 @@
+{
+  "run_id": "d428571a-c3ca-4d83-afe6-c1b5da9e8a6e",
+  "started_at": "2026-10-30T13:52:31.066889",
+  "finished_at": "2026-10-30T13:52:34.106610",
+  "duration_secs": 3.04,
+  "total_input": 5150,
+  "accepted": 0,
+  "rejected": 200,
+  "acceptance_rate_pct": 0.0,
+  "rejection_rate_pct": 3.88
+}

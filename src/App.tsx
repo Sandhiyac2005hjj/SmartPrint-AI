@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { ActiveTab, Customer, JobCard, CompanySettings, ActivityLog, JobStatus, PaymentStatus, Employee } from './types';
 import { storageService } from './services/storage.service';
+import { apiService } from './services/api.service';
 
 import { Sidebar } from './components/layout/Sidebar';
 import { Header } from './components/layout/Header';
@@ -16,6 +17,7 @@ import { FileArchive } from './components/files/FileArchive';
 import { Reports } from './components/reports/Reports';
 import { Settings } from './components/settings/Settings';
 import { ToastContainer, ToastMessage, ConfirmDialog } from './components/common/Toast';
+import { PrintPulseAnalytics } from './components/analytics/PrintPulseAnalytics';
 
 export function App() {
   const [activeTab, setActiveTab] = useState<ActiveTab>('dashboard');
@@ -55,18 +57,59 @@ export function App() {
   });
 
   // Load Data
-  const refreshData = () => {
-    setCustomers(storageService.getCustomers());
-    setJobCards(storageService.getJobCards());
-    setSettings(storageService.getSettings());
-    setEmployees(storageService.getEmployees());
-    setLogs(storageService.getLogs());
+  const refreshData = async () => {
+    try {
+      const [apiCusts, apiJobs, apiEmps, apiSettings, apiLogs] = await Promise.all([
+        apiService.getCustomers().catch(() => null),
+        apiService.getJobCards().catch(() => null),
+        apiService.getEmployees().catch(() => null),
+        apiService.getSettings().catch(() => null),
+        apiService.getLogs().catch(() => null),
+      ]);
+
+      if (apiCusts && apiCusts.length > 0) {
+        setCustomers(apiCusts);
+      } else {
+        setCustomers(storageService.getCustomers());
+      }
+
+      if (apiJobs && apiJobs.length > 0) {
+        setJobCards(apiJobs);
+      } else {
+        setJobCards(storageService.getJobCards());
+      }
+
+      if (apiEmps && apiEmps.length > 0) {
+        setEmployees(apiEmps);
+      } else {
+        setEmployees(storageService.getEmployees());
+      }
+
+      if (apiSettings && apiSettings.companyName) {
+        setSettings(apiSettings);
+      } else {
+        setSettings(storageService.getSettings());
+      }
+
+      if (apiLogs && apiLogs.length > 0) {
+        setLogs(apiLogs);
+      } else {
+        setLogs(storageService.getLogs());
+      }
+    } catch (err) {
+      console.warn('[App] Backend load failed, falling back to local storage:', err);
+      setCustomers(storageService.getCustomers());
+      setJobCards(storageService.getJobCards());
+      setSettings(storageService.getSettings());
+      setEmployees(storageService.getEmployees());
+      setLogs(storageService.getLogs());
+    }
   };
 
   useEffect(() => {
     refreshData();
     const hash = window.location.hash.replace('#', '');
-    const validTabs: ActiveTab[] = ['dashboard', 'customers', 'jobcards', 'billing', 'files', 'reports', 'settings'];
+    const validTabs: ActiveTab[] = ['dashboard', 'customers', 'jobcards', 'billing', 'files', 'reports', 'settings', 'analytics'];
     if (validTabs.includes(hash as ActiveTab)) {
       setActiveTab(hash as ActiveTab);
     } else {
@@ -86,7 +129,7 @@ export function App() {
         return;
       }
       const hash = window.location.hash.replace('#', '');
-      const validTabs: ActiveTab[] = ['dashboard', 'customers', 'jobcards', 'billing', 'files', 'reports', 'settings'];
+      const validTabs: ActiveTab[] = ['dashboard', 'customers', 'jobcards', 'billing', 'files', 'reports', 'settings', 'analytics'];
       if (validTabs.includes(hash as ActiveTab)) {
         setActiveTab(hash as ActiveTab);
       }
@@ -198,13 +241,22 @@ export function App() {
   };
 
   // --- CUSTOMER ACTIONS ---
-  const handleSaveCustomer = (data: Omit<Customer, 'id' | 'customerCode' | 'createdAt'> & { id?: string }) => {
+  const handleSaveCustomer = async (data: Omit<Customer, 'id' | 'customerCode' | 'createdAt'> & { id?: string }) => {
     const isEdit = !!data.id;
-    const saved = storageService.saveCustomer(data);
-    refreshData();
-    setIsCustomerModalOpen(false);
-    setEditingCustomer(undefined);
-    addToast('success', isEdit ? 'Customer Profile Updated' : 'New Customer Registered', `${saved.name} (${saved.company})`);
+    try {
+      const saved = await apiService.saveCustomer(data);
+      storageService.saveCustomer(data);
+      await refreshData();
+      setIsCustomerModalOpen(false);
+      setEditingCustomer(undefined);
+      addToast('success', isEdit ? 'Customer Profile Updated' : 'New Customer Registered', `${saved.name} (${saved.company})`);
+    } catch {
+      const saved = storageService.saveCustomer(data);
+      await refreshData();
+      setIsCustomerModalOpen(false);
+      setEditingCustomer(undefined);
+      addToast('success', isEdit ? 'Customer Profile Updated' : 'New Customer Registered', `${saved.name} (${saved.company})`);
+    }
   };
 
   const handleDeleteCustomer = (id: string) => {
@@ -213,9 +265,14 @@ export function App() {
       title: 'Delete Customer Record?',
       message: 'Are you sure you want to permanently delete this customer from press records?',
       isDanger: true,
-      onConfirm: () => {
+      onConfirm: async () => {
+        try {
+          await apiService.deleteCustomer(id);
+        } catch {
+          // ignore
+        }
         storageService.deleteCustomer(id);
-        refreshData();
+        await refreshData();
         setConfirmDialog((prev) => ({ ...prev, isOpen: false }));
         addToast('warning', 'Customer Record Deleted');
       },
@@ -223,27 +280,44 @@ export function App() {
   };
 
   // --- JOB CARD ACTIONS ---
-  const handleSaveJobCard = (data: Partial<JobCard>) => {
+  const handleSaveJobCard = async (data: Partial<JobCard>) => {
     const isEdit = !!data.id;
-    const saved = storageService.saveJobCard(data);
-    refreshData();
-    setIsJobFormOpen(false);
-    setEditingJobCard(undefined);
-    setPreselectedCustomer(undefined);
-    
-    // Update active modal if viewing
-    if (selectedJobCardDetail?.id === saved.id) {
-      setSelectedJobCardDetail(saved);
+    try {
+      const saved = await apiService.saveJobCard(data);
+      storageService.saveJobCard(data);
+      await refreshData();
+      setIsJobFormOpen(false);
+      setEditingJobCard(undefined);
+      setPreselectedCustomer(undefined);
+      if (selectedJobCardDetail?.id === saved.id) {
+        setSelectedJobCardDetail(saved);
+      }
+      addToast('success', isEdit ? `Job Card #${saved.jobNo} Updated` : `Job Card #${saved.jobNo} Generated`, `Product: ${saved.productName}`);
+    } catch {
+      const saved = storageService.saveJobCard(data);
+      await refreshData();
+      setIsJobFormOpen(false);
+      setEditingJobCard(undefined);
+      setPreselectedCustomer(undefined);
+      if (selectedJobCardDetail?.id === saved.id) {
+        setSelectedJobCardDetail(saved);
+      }
+      addToast('success', isEdit ? `Job Card #${saved.jobNo} Updated` : `Job Card #${saved.jobNo} Generated`, `Product: ${saved.productName}`);
     }
-    
-    addToast('success', isEdit ? `Job Card #${saved.jobNo} Updated` : `Job Card #${saved.jobNo} Generated`, `Product: ${saved.productName}`);
   };
 
-  const handleDuplicateJobCard = (id: string) => {
-    const duplicated = storageService.duplicateJobCard(id);
-    if (duplicated) {
-      refreshData();
+  const handleDuplicateJobCard = async (id: string) => {
+    try {
+      const duplicated = await apiService.duplicateJobCard(id);
+      storageService.duplicateJobCard(id);
+      await refreshData();
       addToast('info', 'Job Card Cloned', `Created new duplicate order #${duplicated.jobNo}`);
+    } catch {
+      const duplicated = storageService.duplicateJobCard(id);
+      if (duplicated) {
+        await refreshData();
+        addToast('info', 'Job Card Cloned', `Created new duplicate order #${duplicated.jobNo}`);
+      }
     }
   };
 
@@ -253,9 +327,14 @@ export function App() {
       title: 'Delete Job Card?',
       message: 'Are you sure you want to delete this Job Card ticket from database?',
       isDanger: true,
-      onConfirm: () => {
+      onConfirm: async () => {
+        try {
+          await apiService.deleteJobCard(id);
+        } catch {
+          // ignore
+        }
         storageService.deleteJobCard(id);
-        refreshData();
+        await refreshData();
         setSelectedJobCardDetail(undefined);
         setConfirmDialog((prev) => ({ ...prev, isOpen: false }));
         addToast('warning', 'Job Card Deleted');
@@ -263,23 +342,41 @@ export function App() {
     });
   };
 
-  const handleUpdateJobStatus = (id: string, status: JobStatus, note?: string) => {
-    const updated = storageService.updateJobStatus(id, status, note);
-    if (updated) {
-      refreshData();
+  const handleUpdateJobStatus = async (id: string, status: JobStatus, note?: string) => {
+    try {
+      const updated = await apiService.updateJobStatus(id, status, note);
+      storageService.updateJobStatus(id, status, note);
+      await refreshData();
       setSelectedJobCardDetail(updated);
       addToast('success', `Status Changed to ${status}`, `Job #${updated.jobNo}`);
+    } catch {
+      const updated = storageService.updateJobStatus(id, status, note);
+      if (updated) {
+        await refreshData();
+        setSelectedJobCardDetail(updated);
+        addToast('success', `Status Changed to ${status}`, `Job #${updated.jobNo}`);
+      }
     }
   };
 
-  const handleUpdatePayment = (jobId: string, advancePaid: number, paymentStatus: PaymentStatus, billNo?: string) => {
-    const updated = storageService.updateJobPayment(jobId, advancePaid, paymentStatus, billNo);
-    if (updated) {
-      refreshData();
+  const handleUpdatePayment = async (jobId: string, advancePaid: number, paymentStatus: PaymentStatus, billNo?: string) => {
+    try {
+      const updated = await apiService.updateJobPayment(jobId, advancePaid, paymentStatus, billNo);
+      storageService.updateJobPayment(jobId, advancePaid, paymentStatus, billNo);
+      await refreshData();
       if (selectedJobCardDetail?.id === updated.id) {
         setSelectedJobCardDetail(updated);
       }
       addToast('success', 'Payment Recorded', `Job #${updated.jobNo}: Paid ₹${advancePaid.toLocaleString()}, Balance ₹${updated.billing.balanceAmount.toLocaleString()}`);
+    } catch {
+      const updated = storageService.updateJobPayment(jobId, advancePaid, paymentStatus, billNo);
+      if (updated) {
+        await refreshData();
+        if (selectedJobCardDetail?.id === updated.id) {
+          setSelectedJobCardDetail(updated);
+        }
+        addToast('success', 'Payment Recorded', `Job #${updated.jobNo}: Paid ₹${advancePaid.toLocaleString()}, Balance ₹${updated.billing.balanceAmount.toLocaleString()}`);
+      }
     }
   };
 
@@ -400,6 +497,8 @@ export function App() {
           )}
 
           {activeTab === 'reports' && <Reports jobCards={jobCards} />}
+
+          {activeTab === 'analytics' && <PrintPulseAnalytics />}
 
           {activeTab === 'settings' && (
             <Settings

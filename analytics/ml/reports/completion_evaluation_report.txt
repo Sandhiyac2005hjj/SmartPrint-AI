@@ -1,0 +1,27 @@
+=================================================================
+PrintPulse Analytics — Job Completion Time Prediction Report
+=================================================================
+Trained:        2026-11-05 15:06:49
+Model:          Gradient Boosting Regressor (Physical Specs)
+Train Samples:  3,255
+Test Samples:   814
+
+--- Metrics ---
+R2 Score:                    0.6566
+Mean Absolute Error (MAE):   1.46 days
+Median Absolute Error:       1.26 days
+Root Mean Squared Error:     1.84 days
+Accuracy (within +/- 1 day): 41.9%
+Accuracy (within +/- 2 days):75.3%
+
+--- Feature Importance ---
+  complexity             0.4200
+  base_days              0.3196
+  quantity               0.0702
+  qty_log                0.0677
+  priority_val           0.0644
+  has_lamination         0.0215
+  print_type_code        0.0186
+  qty_factor             0.0070
+  has_foil               0.0063
+  is_double_sided        0.0047
